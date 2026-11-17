@@ -197,4 +197,56 @@ void main() {
     expect(() => repo.importJson('{"format":"x"}'), throwsFormatException);
     expect(await db.select(db.bodyWeightEntries).get(), hasLength(1));
   });
+
+  test('Dip-e1RM nutzt das Körpergewicht (50 kg x 3 bei 82,5 kg = 63,25)', () async {
+    final tue = DateTime(2026, 11, 17);
+    await repo.saveWeight(DateTime(2026, 11, 16), 82.5);
+    final slot = day(2).slots.single;
+    final res = await repo.saveSession(
+        day: day(2),
+        planned: tue,
+        performed: tue,
+        setsBySlot: {slot.slotId: [s(3, 50), s(3, 50), s(3, 50)]});
+    expect(res[slot.slotId]!.e1rm, closeTo(63.25, 0.01));
+    expect(res[slot.slotId]!.bodyweight, 82.5);
+    final sess = await repo.sessionForPlannedDate(tue);
+    final stored = await repo.resultsForSession(sess!.id);
+    expect(stored[slot.slotId]!.bodyweight, 82.5);
+  });
+
+  test('Dip ohne Körpergewicht: Fallback auf Zusatzgewicht', () async {
+    final tue = DateTime(2026, 11, 17);
+    final slot = day(2).slots.single;
+    final res = await repo.saveSession(
+        day: day(2),
+        planned: tue,
+        performed: tue,
+        setsBySlot: {slot.slotId: [s(3, 50)]});
+    expect(res[slot.slotId]!.e1rm, closeTo(55, 0.01));
+    expect(res[slot.slotId]!.bodyweight, isNull);
+  });
+
+  test('Körpergewicht: letzte Messung am oder vor dem Tag', () async {
+    await repo.saveWeight(DateTime(2026, 11, 10), 80);
+    await repo.saveWeight(DateTime(2026, 11, 14), 81);
+    expect(await repo.bodyweightAtOrBefore(DateTime(2026, 11, 9)), isNull);
+    expect(await repo.bodyweightAtOrBefore(DateTime(2026, 11, 12)), 80);
+    expect(await repo.bodyweightAtOrBefore(DateTime(2026, 11, 20)), 81);
+  });
+
+  test('bestE1rmByExerciseSince: bester Wert je Übung im Zeitraum', () async {
+    final slot = day(1).slots[0];
+    for (final (d, w) in [(DateTime(2026, 9, 7), 120.0), (DateTime(2026, 11, 2), 100.0), (DateTime(2026, 11, 9), 105.0)]) {
+      await repo.saveSession(
+          day: day(1),
+          planned: d,
+          performed: d,
+          setsBySlot: {slot.slotId: [s(5, w), s(5, w)]});
+    }
+    final since = await repo.bestE1rmByExerciseSince(DateTime(2026, 10, 1));
+    expect(since['back_squat'], closeTo(105 * (1 + 5 / 30), 0.01)); // 120 kg liegt davor
+    final all = await repo.bestE1rmByExerciseSince(DateTime(2026, 1, 1));
+    expect(all['back_squat'], closeTo(140, 0.01));
+    expect(since.containsKey('weighted_dip'), isFalse);
+  });
 }

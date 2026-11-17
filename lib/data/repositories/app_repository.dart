@@ -157,6 +157,7 @@ class AppRepository {
       e1rm: se.e1rmBest,
       volume: se.volume,
       topWeight: se.topWeight,
+      bodyweight: se.bodyweightKg,
       date: date,
     );
   }
@@ -228,6 +229,9 @@ class AppRepository {
         slot.slotId: await _failureStreak(slot, existing?.id),
     };
 
+    // Körpergewicht für Dip/Pullup: letzte Messung am oder vor dem Trainingstag.
+    final bodyweight = await bodyweightAtOrBefore(performed);
+
     return db.transaction(() async {
       final sessionId = await _upsertSession(
         WorkoutSessionsCompanion.insert(
@@ -248,7 +252,10 @@ class AppRepository {
 
         final rec = _engine.evaluate(slot.rule, sets,
             previousFailureStreak: streaks[slot.slotId] ?? 0);
-        final e1rm = E1rmCalculator.best(sets);
+        final usesBw = slot.loadType == LoadType.addedBodyweight;
+        final bw = usesBw ? bodyweight : null;
+        final e1rm = E1rmCalculator.bestForLoad(sets, slot.loadType,
+            bodyweight: bw);
         final volume = E1rmCalculator.volume(sets);
         final top = sets.map((s) => s.weight).reduce((a, b) => a > b ? a : b);
 
@@ -259,6 +266,7 @@ class AppRepository {
                 exerciseId: slot.exerciseId,
                 topWeight: top,
                 e1rmBest: e1rm,
+                bodyweightKg: Value(bw),
                 volume: volume,
                 progressionResult: rec.action.name,
                 progressionMessage: rec.message,
@@ -281,6 +289,7 @@ class AppRepository {
           e1rm: e1rm,
           volume: volume,
           topWeight: top,
+          bodyweight: bw,
         );
       }
       return results;
@@ -343,6 +352,36 @@ class AppRepository {
   }
 
   // --------------------------------------------------------------- Gewicht
+
+  /// Letzte Körpergewichtsmessung am oder vor [day] (sonst `null`).
+  Future<double?> bodyweightAtOrBefore(DateTime day) async {
+    final row = await (db.select(db.bodyWeightEntries)
+          ..where((t) => t.date.isSmallerOrEqualValue(dateKey(day)))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(1))
+        .getSingleOrNull();
+    return row?.weightKg;
+  }
+
+  /// Bester e1RM je Übung (Schlüssel = Exercise.key) seit [since],
+  /// nur aus erledigten Einheiten.
+  Future<Map<String, double>> bestE1rmByExerciseSince(DateTime since) async {
+    final q = db.select(db.sessionExercises).join([
+      innerJoin(db.workoutSessions,
+          db.workoutSessions.id.equalsExp(db.sessionExercises.sessionId)),
+      innerJoin(db.exercises,
+          db.exercises.id.equalsExp(db.sessionExercises.exerciseId)),
+    ])
+      ..where(db.workoutSessions.status.equals('done') &
+          db.workoutSessions.performedDate.isBiggerOrEqualValue(dateKey(since)));
+    final out = <String, double>{};
+    for (final r in await q.get()) {
+      final key = r.readTable(db.exercises).key;
+      final v = r.readTable(db.sessionExercises).e1rmBest;
+      if (v > (out[key] ?? 0)) out[key] = v;
+    }
+    return out;
+  }
 
   Stream<List<BodyWeightEntry>> watchWeights() => (db.select(db.bodyWeightEntries)
         ..orderBy([(t) => OrderingTerm.desc(t.date)]))

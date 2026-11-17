@@ -7,6 +7,7 @@ import '../../core/format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/glass.dart';
 import '../../domain/date_utils.dart';
+import '../../domain/plan_seed.dart';
 import '../../domain/models.dart';
 import '../../domain/views.dart';
 
@@ -93,7 +94,7 @@ class DashboardScreen extends ConsumerWidget {
                     .headlineMedium
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
-            _WeekRingCard(done: weekDone, total: trainingDays.length),
+            _ScoreCard(state: ref.watch(strengthScoreProvider).value),
             const SizedBox(height: 12),
             if (nudge != null) ...[
               GlassCard(
@@ -120,6 +121,8 @@ class DashboardScreen extends ConsumerWidget {
             ],
             const SizedBox(height: 12),
             _WeekStrip(
+                done: weekDone,
+                total: trainingDays.length,
                 monday: monday,
                 plan: plan,
                 byDate: byDate,
@@ -160,48 +163,104 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _WeekRingCard extends StatelessWidget {
-  const _WeekRingCard({required this.done, required this.total});
-  final int done;
-  final int total;
+class _ScoreCard extends StatelessWidget {
+  const _ScoreCard({required this.state});
+  final ScoreState? state;
+
+  static const _lifts = [
+    (ExerciseKeys.weightedDip, 'Dip'),
+    (ExerciseKeys.weightedPullup, 'Pullup'),
+    (ExerciseKeys.backSquat, 'Squat'),
+    (ExerciseKeys.zercherSquat, 'Zercher'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final r = state?.result;
+    final gap = state?.gap;
+    final score = r?.score;
+
+    String headline;
+    String? sub;
+    if (r != null) {
+      headline = 'Top ${r.topPercent} % deiner Altersgruppe';
+      sub = 'Schätzung · Alter ${r.age} · ${r.liftCount} von 4 Übungen'
+          '${r.provisional ? ' (vorläufig)' : ''}';
+    } else if (gap == ScoreGap.noBodyweight) {
+      headline = 'Körpergewicht fehlt';
+      sub = 'Trage dein Gewicht ein, dann berechne ich den Score.';
+    } else {
+      headline = 'Noch kein Score';
+      sub = 'Der Score erscheint nach deinem ersten Training mit '
+          'Dip, Pullup oder Squat.';
+    }
+
     return GlassCard(
       glow: true,
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
+      child: Column(
         children: [
-          NeonRing(
-            size: 120,
-            stroke: 11,
-            progress: total == 0 ? 0 : done / total,
-            center: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('$done/$total',
-                  style: const TextStyle(
-                      fontSize: 28, fontWeight: FontWeight.w800)),
-              const Text('Trainings',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            ]),
-          ),
-          const SizedBox(width: 18),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Diese Woche',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                SizedBox(height: 6),
-                Text(
-                  'Der Strength Score erscheint hier, sobald genug Trainingsdaten vorliegen.',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ],
+          Center(
+            child: NeonRing(
+              size: 210,
+              stroke: 15,
+              progress: (score ?? 0) / 100,
+              center: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(score == null ? '–' : '${score.round()}',
+                    style: const TextStyle(
+                        fontSize: 64,
+                        fontWeight: FontWeight.w800,
+                        height: 1.0)),
+                const SizedBox(height: 4),
+                const Text('STRENGTH SCORE',
+                    style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        letterSpacing: 1.6,
+                        fontWeight: FontWeight.w600)),
+              ]),
             ),
           ),
+          const SizedBox(height: 16),
+          Text(headline,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: r != null ? AppColors.neon : AppColors.textPrimary)),
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            Text(sub,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13)),
+          ],
+          const SizedBox(height: 16),
+          Row(children: [
+            for (final (key, label) in _lifts)
+              Expanded(child: _liftCell(label, r?.liftPercentiles[key],
+                  state?.e1rm[key])),
+          ]),
         ],
       ),
     );
+  }
+
+  Widget _liftCell(String label, double? percentile, double? e1rm) {
+    return Column(children: [
+      Text(percentile == null ? '–' : '${percentile.round()}',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: percentile == null
+                  ? AppColors.textSecondary
+                  : AppColors.textPrimary)),
+      const SizedBox(height: 2),
+      Text(label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+      Text(e1rm == null ? ' ' : '${fmtKg(e1rm, maxDecimals: 1)} kg',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+    ]);
   }
 }
 
@@ -375,12 +434,16 @@ class _OverdueCard extends StatelessWidget {
 
 class _WeekStrip extends StatelessWidget {
   const _WeekStrip({
+    required this.done,
+    required this.total,
     required this.monday,
     required this.plan,
     required this.byDate,
     required this.today,
     required this.start,
   });
+  final int done;
+  final int total;
   final DateTime monday;
   final List<DayInfo> plan;
   final Map<String, SessionInfo> byDate;
@@ -391,12 +454,24 @@ class _WeekStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          for (var i = 0; i < 7; i++) _cell(context, addDays(monday, i)),
-        ],
-      ),
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+          child: Row(children: [
+            const Expanded(
+                child: Text('Diese Woche',
+                    style: TextStyle(fontWeight: FontWeight.w700))),
+            Text('$done/$total Trainings',
+                style: const TextStyle(color: AppColors.textSecondary)),
+          ]),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            for (var i = 0; i < 7; i++) _cell(context, addDays(monday, i)),
+          ],
+        ),
+      ]),
     );
   }
 

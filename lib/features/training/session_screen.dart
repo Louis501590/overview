@@ -176,6 +176,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
             setsBySlot: setsBySlot,
           );
       ref.invalidate(lastResultProvider);
+      ref.invalidate(strengthScoreProvider);
       final existing =
           await ref.read(repositoryProvider).sessionForPlannedDate(_planned);
       if (!mounted) return;
@@ -216,6 +217,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
     await ref.read(repositoryProvider).markSkipped(_day!, _planned);
     ref.invalidate(lastResultProvider);
+    ref.invalidate(strengthScoreProvider);
     if (mounted) _back();
   }
 
@@ -226,6 +228,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
     }
     await ref.read(repositoryProvider).resetSession(_planned);
     ref.invalidate(lastResultProvider);
+    ref.invalidate(strengthScoreProvider);
     if (mounted) _back();
   }
 
@@ -397,6 +400,18 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
               Expanded(
                   child: _stat('Volumen', '${fmtKg(result.volume, maxDecimals: 0)} kg')),
             ]),
+            if (slot.loadType == LoadType.addedBodyweight) ...[
+              const SizedBox(height: 4),
+              Text(
+                result.bodyweight != null
+                    ? 'e1RM = geschätztes Zusatzgewicht für 1 Wdh., berechnet mit '
+                        'Körpergewicht ${fmtKg(result.bodyweight!)} kg.'
+                    : 'e1RM nur aus dem Zusatzgewicht (kein Körpergewicht erfasst – '
+                        'trage es unter „Gewicht“ ein für ein genaueres Ergebnis).',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 11),
+              ),
+            ],
             const SizedBox(height: 10),
             Row(children: [
               StatusChip(actionTitle(result.action),
