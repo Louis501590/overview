@@ -5,6 +5,7 @@ import '../data/db/database.dart';
 import '../data/repositories/app_repository.dart';
 import '../core/format.dart';
 import '../domain/date_utils.dart';
+import '../domain/engines/analytics.dart';
 import '../domain/engines/schedule.dart';
 import '../domain/engines/strength_score.dart';
 import '../domain/models.dart';
@@ -145,3 +146,8 @@ final strengthScoreProvider = FutureProvider<ScoreState>((ref) async {
       e1rm: e1rm,
       bodyweight: bw);
 });
+
+/// Alle erledigten Trainingstage einer Übung (Schlüssel aus [ExerciseKeys]).
+final exercisePointsProvider =
+    StreamProvider.family<List<ExercisePoint>, String>((ref, key) =>
+        ref.watch(repositoryProvider).watchExercisePoints(key));

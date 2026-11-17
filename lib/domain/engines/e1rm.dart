@@ -7,8 +7,10 @@ import '../models.dart';
 class E1rmCalculator {
   const E1rmCalculator._();
 
-  /// Maximal gewertete Wiederholungen; darüber ist Epley zu ungenau.
-  static const maxReliableReps = 12;
+  /// Maximal gewertete Wiederholungen. Epley schätzt das 1-Rep-Max nur bei
+  /// niedrigen Wiederholungszahlen zuverlässig; Sätze mit mehr Wiederholungen
+  /// (z. B. Hypertrophie, 8–10 Wdh.) liefern **keinen** e1RM (Ergebnis 0).
+  static const maxReliableReps = 6;
 
   static double epley(double weight, int reps) {
     if (reps <= 0 || weight <= 0) return 0;
@@ -16,7 +18,8 @@ class E1rmCalculator {
     return weight * (1 + reps / 30);
   }
 
-  /// Bester e1RM über alle Sätze (Sätze > [maxReliableReps] werden ignoriert).
+  /// Bester e1RM über alle Sätze (Sätze > [maxReliableReps] werden ignoriert;
+  /// ohne verwertbaren Satz ist das Ergebnis 0).
   static double best(Iterable<SetResult> sets) {
     var best = 0.0;
     for (final s in sets) {
