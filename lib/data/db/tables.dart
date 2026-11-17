@@ -63,6 +63,8 @@ class SessionExercises extends Table {
   RealColumn get topWeight => real()();
   RealColumn get e1rmBest => real()();
   RealColumn get volume => real()();
+  /// Körpergewicht, mit dem der e1RM berechnet wurde (nur Dip/Pullup).
+  RealColumn get bodyweightKg => real().nullable()();
   TextColumn get progressionResult => text()(); // increase | hold | deload
   TextColumn get progressionMessage => text()();
 }

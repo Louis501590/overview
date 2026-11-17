@@ -2198,6 +2198,17 @@ class $SessionExercisesTable extends SessionExercises
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _bodyweightKgMeta = const VerificationMeta(
+    'bodyweightKg',
+  );
+  @override
+  late final GeneratedColumn<double> bodyweightKg = GeneratedColumn<double>(
+    'bodyweight_kg',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _progressionResultMeta = const VerificationMeta(
     'progressionResult',
   );
@@ -2230,6 +2241,7 @@ class $SessionExercisesTable extends SessionExercises
     topWeight,
     e1rmBest,
     volume,
+    bodyweightKg,
     progressionResult,
     progressionMessage,
   ];
@@ -2296,6 +2308,15 @@ class $SessionExercisesTable extends SessionExercises
     } else if (isInserting) {
       context.missing(_volumeMeta);
     }
+    if (data.containsKey('bodyweight_kg')) {
+      context.handle(
+        _bodyweightKgMeta,
+        bodyweightKg.isAcceptableOrUnknown(
+          data['bodyweight_kg']!,
+          _bodyweightKgMeta,
+        ),
+      );
+    }
     if (data.containsKey('progression_result')) {
       context.handle(
         _progressionResultMeta,
@@ -2355,6 +2376,10 @@ class $SessionExercisesTable extends SessionExercises
         DriftSqlType.double,
         data['${effectivePrefix}volume'],
       )!,
+      bodyweightKg: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}bodyweight_kg'],
+      ),
       progressionResult: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}progression_result'],
@@ -2380,6 +2405,9 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
   final double topWeight;
   final double e1rmBest;
   final double volume;
+
+  /// Körpergewicht, mit dem der e1RM berechnet wurde (nur Dip/Pullup).
+  final double? bodyweightKg;
   final String progressionResult;
   final String progressionMessage;
   const SessionExercise({
@@ -2390,6 +2418,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
     required this.topWeight,
     required this.e1rmBest,
     required this.volume,
+    this.bodyweightKg,
     required this.progressionResult,
     required this.progressionMessage,
   });
@@ -2403,6 +2432,9 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
     map['top_weight'] = Variable<double>(topWeight);
     map['e1rm_best'] = Variable<double>(e1rmBest);
     map['volume'] = Variable<double>(volume);
+    if (!nullToAbsent || bodyweightKg != null) {
+      map['bodyweight_kg'] = Variable<double>(bodyweightKg);
+    }
     map['progression_result'] = Variable<String>(progressionResult);
     map['progression_message'] = Variable<String>(progressionMessage);
     return map;
@@ -2417,6 +2449,9 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
       topWeight: Value(topWeight),
       e1rmBest: Value(e1rmBest),
       volume: Value(volume),
+      bodyweightKg: bodyweightKg == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bodyweightKg),
       progressionResult: Value(progressionResult),
       progressionMessage: Value(progressionMessage),
     );
@@ -2435,6 +2470,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
       topWeight: serializer.fromJson<double>(json['topWeight']),
       e1rmBest: serializer.fromJson<double>(json['e1rmBest']),
       volume: serializer.fromJson<double>(json['volume']),
+      bodyweightKg: serializer.fromJson<double?>(json['bodyweightKg']),
       progressionResult: serializer.fromJson<String>(json['progressionResult']),
       progressionMessage: serializer.fromJson<String>(
         json['progressionMessage'],
@@ -2452,6 +2488,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
       'topWeight': serializer.toJson<double>(topWeight),
       'e1rmBest': serializer.toJson<double>(e1rmBest),
       'volume': serializer.toJson<double>(volume),
+      'bodyweightKg': serializer.toJson<double?>(bodyweightKg),
       'progressionResult': serializer.toJson<String>(progressionResult),
       'progressionMessage': serializer.toJson<String>(progressionMessage),
     };
@@ -2465,6 +2502,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
     double? topWeight,
     double? e1rmBest,
     double? volume,
+    Value<double?> bodyweightKg = const Value.absent(),
     String? progressionResult,
     String? progressionMessage,
   }) => SessionExercise(
@@ -2475,6 +2513,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
     topWeight: topWeight ?? this.topWeight,
     e1rmBest: e1rmBest ?? this.e1rmBest,
     volume: volume ?? this.volume,
+    bodyweightKg: bodyweightKg.present ? bodyweightKg.value : this.bodyweightKg,
     progressionResult: progressionResult ?? this.progressionResult,
     progressionMessage: progressionMessage ?? this.progressionMessage,
   );
@@ -2489,6 +2528,9 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
       topWeight: data.topWeight.present ? data.topWeight.value : this.topWeight,
       e1rmBest: data.e1rmBest.present ? data.e1rmBest.value : this.e1rmBest,
       volume: data.volume.present ? data.volume.value : this.volume,
+      bodyweightKg: data.bodyweightKg.present
+          ? data.bodyweightKg.value
+          : this.bodyweightKg,
       progressionResult: data.progressionResult.present
           ? data.progressionResult.value
           : this.progressionResult,
@@ -2508,6 +2550,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
           ..write('topWeight: $topWeight, ')
           ..write('e1rmBest: $e1rmBest, ')
           ..write('volume: $volume, ')
+          ..write('bodyweightKg: $bodyweightKg, ')
           ..write('progressionResult: $progressionResult, ')
           ..write('progressionMessage: $progressionMessage')
           ..write(')'))
@@ -2523,6 +2566,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
     topWeight,
     e1rmBest,
     volume,
+    bodyweightKg,
     progressionResult,
     progressionMessage,
   );
@@ -2537,6 +2581,7 @@ class SessionExercise extends DataClass implements Insertable<SessionExercise> {
           other.topWeight == this.topWeight &&
           other.e1rmBest == this.e1rmBest &&
           other.volume == this.volume &&
+          other.bodyweightKg == this.bodyweightKg &&
           other.progressionResult == this.progressionResult &&
           other.progressionMessage == this.progressionMessage);
 }
@@ -2549,6 +2594,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
   final Value<double> topWeight;
   final Value<double> e1rmBest;
   final Value<double> volume;
+  final Value<double?> bodyweightKg;
   final Value<String> progressionResult;
   final Value<String> progressionMessage;
   const SessionExercisesCompanion({
@@ -2559,6 +2605,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
     this.topWeight = const Value.absent(),
     this.e1rmBest = const Value.absent(),
     this.volume = const Value.absent(),
+    this.bodyweightKg = const Value.absent(),
     this.progressionResult = const Value.absent(),
     this.progressionMessage = const Value.absent(),
   });
@@ -2570,6 +2617,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
     required double topWeight,
     required double e1rmBest,
     required double volume,
+    this.bodyweightKg = const Value.absent(),
     required String progressionResult,
     required String progressionMessage,
   }) : sessionId = Value(sessionId),
@@ -2588,6 +2636,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
     Expression<double>? topWeight,
     Expression<double>? e1rmBest,
     Expression<double>? volume,
+    Expression<double>? bodyweightKg,
     Expression<String>? progressionResult,
     Expression<String>? progressionMessage,
   }) {
@@ -2599,6 +2648,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
       if (topWeight != null) 'top_weight': topWeight,
       if (e1rmBest != null) 'e1rm_best': e1rmBest,
       if (volume != null) 'volume': volume,
+      if (bodyweightKg != null) 'bodyweight_kg': bodyweightKg,
       if (progressionResult != null) 'progression_result': progressionResult,
       if (progressionMessage != null) 'progression_message': progressionMessage,
     });
@@ -2612,6 +2662,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
     Value<double>? topWeight,
     Value<double>? e1rmBest,
     Value<double>? volume,
+    Value<double?>? bodyweightKg,
     Value<String>? progressionResult,
     Value<String>? progressionMessage,
   }) {
@@ -2623,6 +2674,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
       topWeight: topWeight ?? this.topWeight,
       e1rmBest: e1rmBest ?? this.e1rmBest,
       volume: volume ?? this.volume,
+      bodyweightKg: bodyweightKg ?? this.bodyweightKg,
       progressionResult: progressionResult ?? this.progressionResult,
       progressionMessage: progressionMessage ?? this.progressionMessage,
     );
@@ -2652,6 +2704,9 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
     if (volume.present) {
       map['volume'] = Variable<double>(volume.value);
     }
+    if (bodyweightKg.present) {
+      map['bodyweight_kg'] = Variable<double>(bodyweightKg.value);
+    }
     if (progressionResult.present) {
       map['progression_result'] = Variable<String>(progressionResult.value);
     }
@@ -2671,6 +2726,7 @@ class SessionExercisesCompanion extends UpdateCompanion<SessionExercise> {
           ..write('topWeight: $topWeight, ')
           ..write('e1rmBest: $e1rmBest, ')
           ..write('volume: $volume, ')
+          ..write('bodyweightKg: $bodyweightKg, ')
           ..write('progressionResult: $progressionResult, ')
           ..write('progressionMessage: $progressionMessage')
           ..write(')'))
@@ -5532,6 +5588,7 @@ typedef $$SessionExercisesTableCreateCompanionBuilder =
       required double topWeight,
       required double e1rmBest,
       required double volume,
+      Value<double?> bodyweightKg,
       required String progressionResult,
       required String progressionMessage,
     });
@@ -5544,6 +5601,7 @@ typedef $$SessionExercisesTableUpdateCompanionBuilder =
       Value<double> topWeight,
       Value<double> e1rmBest,
       Value<double> volume,
+      Value<double?> bodyweightKg,
       Value<String> progressionResult,
       Value<String> progressionMessage,
     });
@@ -5655,6 +5713,11 @@ class $$SessionExercisesTableFilterComposer
 
   ColumnFilters<double> get volume => $composableBuilder(
     column: $table.volume,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get bodyweightKg => $composableBuilder(
+    column: $table.bodyweightKg,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5792,6 +5855,11 @@ class $$SessionExercisesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get bodyweightKg => $composableBuilder(
+    column: $table.bodyweightKg,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get progressionResult => $composableBuilder(
     column: $table.progressionResult,
     builder: (column) => ColumnOrderings(column),
@@ -5892,6 +5960,11 @@ class $$SessionExercisesTableAnnotationComposer
 
   GeneratedColumn<double> get volume =>
       $composableBuilder(column: $table.volume, builder: (column) => column);
+
+  GeneratedColumn<double> get bodyweightKg => $composableBuilder(
+    column: $table.bodyweightKg,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get progressionResult => $composableBuilder(
     column: $table.progressionResult,
@@ -6040,6 +6113,7 @@ class $$SessionExercisesTableTableManager
                 Value<double> topWeight = const Value.absent(),
                 Value<double> e1rmBest = const Value.absent(),
                 Value<double> volume = const Value.absent(),
+                Value<double?> bodyweightKg = const Value.absent(),
                 Value<String> progressionResult = const Value.absent(),
                 Value<String> progressionMessage = const Value.absent(),
               }) => SessionExercisesCompanion(
@@ -6050,6 +6124,7 @@ class $$SessionExercisesTableTableManager
                 topWeight: topWeight,
                 e1rmBest: e1rmBest,
                 volume: volume,
+                bodyweightKg: bodyweightKg,
                 progressionResult: progressionResult,
                 progressionMessage: progressionMessage,
               ),
@@ -6062,6 +6137,7 @@ class $$SessionExercisesTableTableManager
                 required double topWeight,
                 required double e1rmBest,
                 required double volume,
+                Value<double?> bodyweightKg = const Value.absent(),
                 required String progressionResult,
                 required String progressionMessage,
               }) => SessionExercisesCompanion.insert(
@@ -6072,6 +6148,7 @@ class $$SessionExercisesTableTableManager
                 topWeight: topWeight,
                 e1rmBest: e1rmBest,
                 volume: volume,
+                bodyweightKg: bodyweightKg,
                 progressionResult: progressionResult,
                 progressionMessage: progressionMessage,
               ),

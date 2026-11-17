@@ -6,6 +6,7 @@ import '../data/repositories/app_repository.dart';
 import '../core/format.dart';
 import '../domain/date_utils.dart';
 import '../domain/engines/schedule.dart';
+import '../domain/engines/strength_score.dart';
 import '../domain/models.dart';
 import '../domain/views.dart';
 
@@ -100,3 +101,47 @@ final startDateProvider = FutureProvider<DateTime>((ref) async {
 
 String longDateDe(DateTime d) =>
     '${weekdayNamesDe[d.weekday - 1]}, ${d.day}. ${monthNamesDe[d.month - 1]}';
+
+/// Zeitraum (Tage), aus dem die besten e1RMs für den Score stammen.
+const strengthScoreWindowDays = 90;
+
+/// Grund, warum (noch) kein Score berechnet werden kann.
+enum ScoreGap { noBodyweight, noTraining }
+
+class ScoreState {
+  const ScoreState({this.result, this.gap, this.e1rm = const {}, this.bodyweight});
+  final StrengthScoreResult? result;
+  final ScoreGap? gap;
+  final Map<String, double> e1rm;
+  final double? bodyweight;
+}
+
+/// Strength Score aus den besten e1RMs der letzten 90 Tage, Körpergewicht,
+/// Alter und Geschlecht. Aktualisiert sich bei Änderungen an Training/Gewicht.
+final strengthScoreProvider = FutureProvider<ScoreState>((ref) async {
+  final today = ref.watch(todayProvider);
+  final profile = ref.watch(profileProvider).value;
+  final weights = ref.watch(weightEntriesProvider).value;
+  // Neu berechnen, sobald sich Einheiten ändern.
+  ref.watch(sessionsPlannedProvider(
+      (from: addDays(today, -strengthScoreWindowDays - 14), to: addDays(today, 14))));
+  if (profile == null || weights == null) return const ScoreState();
+
+  final bw = weights.isEmpty ? null : weights.first.weightKg; // neueste zuerst
+  final e1rm = await ref
+      .read(repositoryProvider)
+      .bestE1rmByExerciseSince(addDays(today, -strengthScoreWindowDays));
+  if (bw == null) return ScoreState(gap: ScoreGap.noBodyweight, e1rm: e1rm);
+
+  final b = profile.birthDate;
+  var age = today.year - b.year;
+  if (today.month < b.month || (today.month == b.month && today.day < b.day)) age--;
+
+  final result = StrengthScoreEngine.compute(
+      e1rmByKey: e1rm, bodyweight: bw, age: age, sex: profile.sex);
+  return ScoreState(
+      result: result,
+      gap: result == null ? ScoreGap.noTraining : null,
+      e1rm: e1rm,
+      bodyweight: bw);
+});

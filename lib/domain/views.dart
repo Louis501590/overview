@@ -101,6 +101,7 @@ class SlotResult {
     required this.e1rm,
     required this.volume,
     required this.topWeight,
+    this.bodyweight,
     this.date,
   });
   final int slotId;
@@ -110,6 +111,9 @@ class SlotResult {
   final double e1rm;
   final double volume;
   final double topWeight;
+
+  /// Körpergewicht, das in den e1RM eingeflossen ist (Dip/Pullup), sonst null.
+  final double? bodyweight;
 
   /// Tatsächliches Trainingsdatum (nur bei geladenen Historien-Ergebnissen).
   final DateTime? date;
