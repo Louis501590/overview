@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/progress/progress_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/training/session_screen.dart';
 import '../features/training/training_screen.dart';
@@ -34,6 +35,11 @@ GoRouter buildRouter(String initialLocation) => GoRouter(
                   ),
                 ],
               ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                  path: '/progress',
+                  builder: (_, _) => const ProgressScreen()),
             ]),
             StatefulShellBranch(routes: [
               GoRoute(

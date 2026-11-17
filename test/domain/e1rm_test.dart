@@ -14,7 +14,7 @@ void main() {
     expect(E1rmCalculator.epley(0, 5), 0);
   });
 
-  test('best nimmt besten Satz und ignoriert > 12 Wdh.', () {
+  test('best nimmt besten Satz und ignoriert > 6 Wdh.', () {
     final sets = [
       const SetResult(weight: 100, reps: 5), // 116,67
       const SetResult(weight: 110, reps: 3), // 121
@@ -63,6 +63,17 @@ void bodyweightTests() {
           closeTo(116.67, 0.01));
     });
 
+    test('Nur Sätze bis 6 Wdh. zählen: 6 ja, 7 nein (Hypertrophie = kein e1RM)', () {
+      expect(E1rmCalculator.best(const [SetResult(weight: 100, reps: 6)]),
+          closeTo(120, 0.01));
+      expect(E1rmCalculator.best(const [SetResult(weight: 100, reps: 7)]), 0);
+      expect(
+          E1rmCalculator.bestForLoad(
+              const [SetResult(weight: 35, reps: 10)], LoadType.addedBodyweight,
+              bodyweight: 82.5),
+          0);
+    });
+
     test('1 Wdh. = Zusatzgewicht, 0 kg Zusatz 5 Wdh. > 0', () {
       expect(
           E1rmCalculator.bestForLoad(
@@ -71,9 +82,9 @@ void bodyweightTests() {
           40);
       expect(
           E1rmCalculator.bestForLoad(
-              const [SetResult(weight: 0, reps: 10)], LoadType.addedBodyweight,
+              const [SetResult(weight: 0, reps: 5)], LoadType.addedBodyweight,
               bodyweight: 80),
-          closeTo(26.67, 0.01));
+          closeTo(13.33, 0.01));
     });
   });
 }

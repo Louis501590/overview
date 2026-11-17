@@ -396,11 +396,22 @@ class _SessionScreenState extends ConsumerState<SessionScreen> {
           if (result != null) ...[
             const Divider(height: 24),
             Row(children: [
-              Expanded(child: _stat('e1RM', '${fmtKg(result.e1rm, maxDecimals: 1)} kg')),
+              Expanded(
+                  child: _stat(
+                      'e1RM',
+                      result.e1rm > 0
+                          ? '${fmtKg(result.e1rm, maxDecimals: 1)} kg'
+                          : '–')),
               Expanded(
                   child: _stat('Volumen', '${fmtKg(result.volume, maxDecimals: 0)} kg')),
             ]),
-            if (slot.loadType == LoadType.addedBodyweight) ...[
+            if (result.e1rm <= 0) ...[
+              const SizedBox(height: 4),
+              const Text(
+                'Kein e1RM: Nur Sätze mit höchstens 6 Wiederholungen werden dafür gewertet.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              ),
+            ] else if (slot.loadType == LoadType.addedBodyweight) ...[
               const SizedBox(height: 4),
               Text(
                 result.bodyweight != null

@@ -26,6 +26,10 @@ class AppShell extends StatelessWidget {
                 selectedIcon: Icon(Icons.fitness_center),
                 label: 'Training'),
             NavigationDestination(
+                icon: Icon(Icons.show_chart),
+                selectedIcon: Icon(Icons.stacked_line_chart),
+                label: 'Fortschritt'),
+            NavigationDestination(
                 icon: Icon(Icons.monitor_weight_outlined),
                 selectedIcon: Icon(Icons.monitor_weight),
                 label: 'Gewicht'),

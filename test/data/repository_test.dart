@@ -249,4 +249,29 @@ void main() {
     expect(all['back_squat'], closeTo(140, 0.01));
     expect(since.containsKey('weighted_dip'), isFalse);
   });
+
+  test('watchExercisePoints: nur erledigte Einheiten der Übung, sortiert', () async {
+    final dip = day(2).slots.single;
+    final dates = [DateTime(2026, 11, 10), DateTime(2026, 11, 3), DateTime(2026, 11, 17)];
+    for (final (i, d) in dates.indexed) {
+      await repo.saveSession(
+          day: day(2),
+          planned: d,
+          performed: d,
+          setsBySlot: {dip.slotId: [s(5, 40.0 + i * 5), s(5, 40.0 + i * 5)]});
+    }
+    // Übersprungene Einheit zählt nicht
+    await repo.markSkipped(day(2), DateTime(2026, 11, 24));
+    // andere Übung zählt nicht
+    await repo.saveSession(
+        day: day(1),
+        planned: DateTime(2026, 11, 16),
+        performed: DateTime(2026, 11, 16),
+        setsBySlot: {day(1).slots[0].slotId: [s(5, 100)]});
+
+    final pts = await repo.watchExercisePoints('weighted_dip').first;
+    expect(pts.map((p) => p.date), [DateTime(2026, 11, 3), DateTime(2026, 11, 10), DateTime(2026, 11, 17)]);
+    expect(pts.map((p) => p.topWeight), [45, 40, 50]);
+    expect(pts.first.volume, 450);
+  });
 }

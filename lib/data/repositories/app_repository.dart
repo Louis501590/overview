@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../domain/date_utils.dart';
+import '../../domain/engines/analytics.dart';
 import '../../domain/engines/e1rm.dart';
 import '../../domain/engines/progression_engine.dart';
 import '../../domain/models.dart';
@@ -361,6 +362,32 @@ class AppRepository {
           ..limit(1))
         .getSingleOrNull();
     return row?.weightKg;
+  }
+
+  /// Alle erledigten Trainingstage einer Übung (aufsteigend). Aktualisiert sich
+  /// automatisch, sobald Einheiten gespeichert oder geändert werden.
+  Stream<List<ExercisePoint>> watchExercisePoints(String exerciseKey) {
+    final q = db.select(db.sessionExercises).join([
+      innerJoin(db.workoutSessions,
+          db.workoutSessions.id.equalsExp(db.sessionExercises.sessionId)),
+      innerJoin(db.exercises,
+          db.exercises.id.equalsExp(db.sessionExercises.exerciseId)),
+    ])
+      ..where(db.exercises.key.equals(exerciseKey) &
+          db.workoutSessions.status.equals('done'));
+    return q.watch().map((rows) {
+      final out = [
+        for (final r in rows)
+          ExercisePoint(
+            date: parseDateKey(r.readTable(db.workoutSessions).performedDate ??
+                r.readTable(db.workoutSessions).plannedDate),
+            topWeight: r.readTable(db.sessionExercises).topWeight,
+            e1rm: r.readTable(db.sessionExercises).e1rmBest,
+            volume: r.readTable(db.sessionExercises).volume,
+          )
+      ]..sort((a, b) => a.date.compareTo(b.date));
+      return out;
+    });
   }
 
   /// Bester e1RM je Übung (Schlüssel = Exercise.key) seit [since],
