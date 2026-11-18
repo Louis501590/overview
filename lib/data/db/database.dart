@@ -28,8 +28,11 @@ class AppDatabase extends _$AppDatabase {
               ),
             ));
 
+  /// Schema-Historie:
+  /// * 1: Ersteinführung (V1)
+  /// * 2: `session_exercises.bodyweight_kg` (e1RM mit Körpergewicht)
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -37,7 +40,18 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
           await seedPlan();
         },
-        // Künftige Schema-Änderungen (V2: goals, weekly_reviews) kommen hier.
+        onUpgrade: (m, from, to) async {
+          // Jeder Schritt läuft einzeln, damit auch Sprünge (1 → 3 …) klappen.
+          if (from < 2) {
+            // Zwischenstände der App haben die Spalte teils schon unter
+            // Version 1 angelegt (ohne Versionssprung). Daher erst prüfen.
+            final cols = await customSelect("PRAGMA table_info('session_exercises')").get();
+            final exists = cols.any((r) => r.read<String>('name') == 'bodyweight_kg');
+            if (!exists) {
+              await m.addColumn(sessionExercises, sessionExercises.bodyweightKg);
+            }
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
