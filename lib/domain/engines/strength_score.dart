@@ -25,13 +25,17 @@ class StrengthScoreResult {
 /// Schätzmodell für den Strength Score (0–100) – **keine** exakte Statistik.
 ///
 /// Idee: Pro Übung wird die relative Stärke (e1RM ÷ Körpergewicht) mit
-/// Referenzwerten trainierender Personen verglichen und in ein Perzentil
-/// übersetzt (5 = Anfänger, 20 = Novice, 50 = Intermediate, 80 = Advanced,
-/// 95 = Elite). Ein Altersfaktor gleicht Jüngere und Ältere aus. Der Score ist
-/// der Mittelwert der Perzentile aller Übungen mit Daten.
+/// Referenzwerten **normaler Gym-Gänger** verglichen (Personen, die seit etwa
+/// einem Jahr regelmäßig mit Gewichten trainieren – nicht alle Menschen und
+/// nicht nur Wettkampf-/Online-Bestwerte) und in ein Perzentil übersetzt
+/// (5 = Einsteiger, 20 = unterdurchschnittlich, 50 = Durchschnitt,
+/// 80 = stark, 95 = Spitze). Ein Altersfaktor gleicht Jüngere und Ältere aus.
+/// Der Score ist der Mittelwert der Perzentile aller Übungen mit Daten.
 ///
-/// Die Referenzwerte sind grobe, an gängigen Strength-Standards orientierte
-/// Näherungen und lassen sich hier zentral anpassen.
+/// Die Referenzwerte sind grobe Schätzungen, keine geprüfte Statistik, und
+/// lassen sich hier zentral anpassen. Kontrollbeispiel: +40 kg × 6 Wdh. bei
+/// 80 kg Körpergewicht im Pullup ergibt einen e1RM von ca. 64 kg Zusatz
+/// (0,8 × KG) und liegt damit in der Spitze (≈ 95 %), nicht im Durchschnitt.
 class StrengthScoreEngine {
   const StrengthScoreEngine._();
 
@@ -41,10 +45,10 @@ class StrengthScoreEngine {
   /// Referenz-Verhältnisse (e1RM ÷ Körpergewicht) für Männer.
   /// Dip/Pullup: **Zusatzgewicht** ÷ Körpergewicht.
   static const Map<String, List<double>> _maleRatios = {
-    ExerciseKeys.backSquat: [0.75, 1.25, 1.75, 2.30, 2.80],
-    ExerciseKeys.zercherSquat: [0.60, 1.00, 1.40, 1.85, 2.25],
-    ExerciseKeys.weightedDip: [0.00, 0.25, 0.60, 1.00, 1.50],
-    ExerciseKeys.weightedPullup: [0.00, 0.20, 0.50, 0.85, 1.25],
+    ExerciseKeys.backSquat: [0.60, 1.00, 1.40, 1.85, 2.30],
+    ExerciseKeys.zercherSquat: [0.50, 0.80, 1.10, 1.50, 1.85],
+    ExerciseKeys.weightedDip: [0.00, 0.15, 0.40, 0.80, 1.30],
+    ExerciseKeys.weightedPullup: [0.00, 0.10, 0.25, 0.50, 0.80],
   };
 
   /// Frauen erreichen im Schnitt geringere relative Kraft (Oberkörper stärker
